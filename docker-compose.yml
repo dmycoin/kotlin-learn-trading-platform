@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    depends_on:
+      - zookeeper
+
+# Настройка обычной mongo standalone
+#  mongodb_new:
+#    image: mongo:latest
+#    container_name: mongodb
+#    ports:
+#      - "27018:27017"  # Здесь 27018 - внешний порт, 27017 - внутренний порт контейнера
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: "root"
+#      MONGO_INITDB_ROOT_PASSWORD: "root"
+
+# Настройка mongo в replica set
+# Настройка replica set по шагам
+# docker exec -it mongo1 /bin/bash
+# mongo --port 27011
+# rs.initiate({_id:'rs0',members:[{_id:0,host:"mongo1:27011"},{_id:1,host:"mongo2:27012"},{_id:2,host:"mongo3:27013"}]})
+  mongo1:
+    hostname: mongo1
+    image: mongo:5.0
+    container_name: mongo1
+    ports:
+      - "27011:27011"
+    command: ["--bind_ip_all", "--replSet", "rs0", "--port", "27011"]
+#    restart: unless-stopped
+    volumes:
+      - mongo1:/data/db
+
+  mongo2:
+    hostname: mongo2
+    image: mongo:5.0
+    container_name: mongo2
+    ports:
+      - "27012:27012"
+    command: ["--bind_ip_all", "--replSet", "rs0", "--port", "27012"]
+    volumes:
+      - mongo2:/data/db
+
+  mongo3:
+    hostname: mongo3
+    image: mongo:5.0
+    container_name: mongo3
+    ports:
+      - "27013:27013"
+    command: ["--bind_ip_all", "--replSet", "rs0", "--port", "27013"]
+    volumes:
+      - mongo3:/data/db
+
+  kafkaui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafkaui
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ELASTIC_PASSWORD=root
+      - xpack.security.enabled=true
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+#  kibana:
+#    image: docker.elastic.co/kibana/kibana:8.17.1
+#    ports: [ "5601:5601" ]
+#    depends_on: [ "elasticsearch" ]
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+#      - ELASTICSEARCH_USERNAME=kibana_system
+#      - ELASTICSEARCH_PASSWORD=root12
+
+volumes:
+  elasticsearch_data:
+  redis_data:
+  mongo1: { }
+  mongo2: { }
+  mongo3: { }

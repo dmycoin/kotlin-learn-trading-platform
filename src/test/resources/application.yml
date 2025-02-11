@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: trading-platform
+  kafka:
+    consumer:
+      group-id: trading-platform
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "io.trading.trading_platform.dto.kafka"
+    bootstrap-servers: kafka:9092
+    admin:
+      auto-create: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    streams:
+      application-id: trading-platform-streams
+      properties:
+        application:
+          id: trading-platform-streams
+        default:
+          replication:
+            factor: 1
+          num:
+            partitions: 3
+
+app:
+  socket:
+    enabled: false
+  stock:
+    url: wss://ws.finnhub.io?token
+    token: {yours_token}
+  topics:
+    stock:
+      price: stock-price

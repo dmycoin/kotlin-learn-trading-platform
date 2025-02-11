@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: trading-platform
+  task:
+    scheduling:
+      pool:
+        size: 10
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 8 #оптимально в 2-3 раза больше, чем ядер CPU
+          max-idle: 4 #оптимально 50-70% от max-active
+    mongodb:
+      uri: mongodb://root:root@mongo1:27011,mongo2:27012,mongo3:27013
+      database: project_db
+      replica-set-name: rs0
+
+  elasticsearch:
+    uris: http://localhost:9200
+    username: elastic
+    password: root
+
+  kafka:
+    consumer:
+      group-id: trading-platform
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "io.trading.trading_platform.dto.kafka"
+    bootstrap-servers: kafka:9092
+    admin:
+      auto-create: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    streams:
+      application-id: trading-platform-streams
+      properties:
+        application:
+          id: trading-platform-streams
+        default:
+          replication:
+            factor: 1
+          num:
+            partitions: 3
+
+app:
+  socket:
+    enabled: true
+  stock:
+    url: wss://ws.finnhub.io?token
+    token: {yours_token}
+  topics:
+    stock:
+      price: stock-price

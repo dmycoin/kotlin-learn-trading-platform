@@ -1,0 +1,13 @@
+package io.trading.trading_platform
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.scheduling.annotation.EnableScheduling
+
+@SpringBootApplication
+@EnableScheduling
+class TradingPlatformApplication
+
+fun main(args: Array<String>) {
+	runApplication<TradingPlatformApplication>(*args)
+}
