@@ -2,6 +2,7 @@ package io.trading.trading_platform.config
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -12,6 +13,7 @@ class JacksonConfig {
     fun objectMapper(): ObjectMapper {
         return ObjectMapper().apply {
             disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            registerModule(JavaTimeModule())
             registerModule(KotlinModule.Builder().build())
         }
     }

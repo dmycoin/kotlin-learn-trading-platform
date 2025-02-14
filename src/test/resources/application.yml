@@ -9,9 +9,11 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "io.trading.trading_platform.dto.kafka"
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: kafka:9093
     admin:
       auto-create: true
+      properties:
+        default.partitions: 3
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -20,18 +22,21 @@ spring:
       properties:
         application:
           id: trading-platform-streams
-        default:
-          replication:
-            factor: 1
-          num:
-            partitions: 3
+          default.partitions: 3
 
 app:
   socket:
     enabled: false
+  kafka:
+    stream:
+      enabled: false
   stock:
     url: wss://ws.finnhub.io?token
     token: {yours_token}
   topics:
     stock:
       price: stock-price
+    trade:
+      trade-event: trade-event
+    alert:
+      volatility-alerts: volatility-alerts

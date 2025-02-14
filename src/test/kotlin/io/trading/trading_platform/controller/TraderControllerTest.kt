@@ -43,7 +43,7 @@ class TraderControllerTest {
         val relaxedWalletService = mockk<WalletServiceImpl>(relaxed = true)
 
         // Настройка мока с явным указанием возвращаемого значения
-            coEvery {
+        coEvery {
             relaxedWalletService.getWallet(match { it == traderId })
         } returns Mono.just(Wallet(traderId, expectedBalance))
 

@@ -1,15 +1,18 @@
 package io.trading.trading_platform.IT.service
 
 import io.trading.trading_platform.IT.AbstractIntegrationTest
+import io.trading.trading_platform.dto.kafka.TradeEventDto
 import io.trading.trading_platform.model.mongo.PortfolioPosition
 import io.trading.trading_platform.model.mongo.Wallet
 import io.trading.trading_platform.repository.PortfolioRepository
 import io.trading.trading_platform.repository.WalletRepository
+import io.trading.trading_platform.service.KafkaSender
 import io.trading.trading_platform.service.LeaderboardService
 import io.trading.trading_platform.service.impl.TradingServiceImpl
 import io.trading.trading_platform.util.RedisKeys
 import org.mockito.Mockito
 import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.dao.DataIntegrityViolationException
@@ -26,6 +29,7 @@ import kotlin.test.Test
 
 @SpringBootTest
 @Testcontainers
+@DirtiesContext
 class TradingServiceImplTest : AbstractIntegrationTest() {
     @Autowired
     private lateinit var tradingService: TradingServiceImpl
@@ -40,6 +44,9 @@ class TradingServiceImplTest : AbstractIntegrationTest() {
     private lateinit var reactiveRedisTemplate: ReactiveRedisTemplate<String, String>
 
     @MockitoSpyBean
+    private lateinit var kafkaSender: KafkaSender
+
+    @MockitoSpyBean
     private lateinit var portfolioRepository: PortfolioRepository
 
     @BeforeTest
@@ -48,6 +55,33 @@ class TradingServiceImplTest : AbstractIntegrationTest() {
         walletRepository.deleteAll().block()
         portfolioRepository.deleteAll().block()
         reactiveRedisTemplate.delete(RedisKeys.leaderboardKey()).block()
+    }
+
+    @Test
+    fun `should send trade event when buying stock`() {
+        // Подготовка
+        val traderId = "trader2"
+        val initialBalance = BigDecimal("1000.00")
+        val wallet = Wallet(traderId = traderId, balance = initialBalance)
+
+        // Сохраняем начальное состояние
+        StepVerifier.create(walletRepository.save(wallet))
+            .expectNextCount(1)
+            .verifyComplete()
+
+        // Покупаем акции
+        val quantity = BigDecimal("10")
+        val price = BigDecimal("20.00")
+
+        StepVerifier.create(tradingService.buyStock(traderId, "AAPL", quantity, price))
+            .expectNextMatches {
+                it.quantity == quantity &&
+                        it.averagePrice == price
+            }
+            .verifyComplete()
+
+        // Проверяем, что событие отправлено
+        verify(kafkaSender).sendTradeEvent(any<TradeEventDto>())
     }
 
     @Test

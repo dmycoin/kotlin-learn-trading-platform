@@ -1,8 +1,10 @@
 package io.trading.trading_platform.service.impl
 
+import io.trading.trading_platform.dto.kafka.TradeEventDto
 import io.trading.trading_platform.exception.EntityNotFoundException
 import io.trading.trading_platform.model.mongo.PortfolioPosition
 import io.trading.trading_platform.repository.PortfolioRepository
+import io.trading.trading_platform.service.KafkaSender
 import io.trading.trading_platform.service.LeaderboardService
 import io.trading.trading_platform.service.TradingService
 import io.trading.trading_platform.service.WalletService
@@ -13,12 +15,14 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
 
 @Service
 class TradingServiceImpl (
     private val portfRepository: PortfolioRepository,
     private val walletRepositoryService: WalletService,
-    private val leaderboardService: LeaderboardService
+    private val leaderboardService: LeaderboardService,
+    private val kafkaSender: KafkaSender
 ) : TradingService {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -68,6 +72,16 @@ class TradingServiceImpl (
                         logger.info("Обновление лидерборда(покупка) для traderId = $traderId")
                     }
             }
+            .flatMap { position ->
+                val tradeEvent = TradeEventDto(
+                    symbol = symbol,
+                    price = price,
+                    volume = quantity,
+                    timestamp = Instant.now()
+                )
+                kafkaSender.sendTradeEvent(tradeEvent)
+                    .thenReturn(position)
+            }
     }
 
     @Transactional
@@ -103,6 +117,16 @@ class TradingServiceImpl (
                         )
                         .doOnSubscribe {
                             logger.info("Обновление лидерборда(продажа) для traderId = $traderId")
+                        }
+                        .flatMap { pos ->
+                            val tradeEvent = TradeEventDto(
+                                symbol = symbol,
+                                price = price,
+                                volume = quantity,
+                                timestamp = Instant.now()
+                            )
+                            kafkaSender.sendTradeEvent(tradeEvent)
+                                .thenReturn(pos)
                         }
                 }
             }

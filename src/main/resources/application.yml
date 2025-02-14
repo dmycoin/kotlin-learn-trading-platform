@@ -52,9 +52,16 @@ spring:
 app:
   socket:
     enabled: true
+  kafka:
+    stream:
+      enabled: true
   stock:
     url: wss://ws.finnhub.io?token
     token: {yours_token}
   topics:
     stock:
       price: stock-price
+    trade:
+      trade-event: trade-event
+    alert:
+      volatility-alerts: volatility-alerts
